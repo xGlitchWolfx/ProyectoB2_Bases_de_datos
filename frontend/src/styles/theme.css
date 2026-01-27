@@ -1,0 +1,41 @@
+:root {
+  --primary-orange: #ff9f1c;
+  --primary-orange-dark: #ff7a00;
+}
+
+.app-header {
+  background-color: var(--primary-orange);
+  color: rgb(255, 255, 255);
+}
+
+.app-footer {
+  background-color: #f8f9fa;
+  color: #555;
+}
+
+.btn-orange {
+  background-color: var(--primary-orange);
+  border: none;
+  color: white;
+}
+
+.btn-orange:hover {
+  background-color: var(--primary-orange-dark);
+  color: white;
+}
+
+.link-orange {
+  color: var(--primary-orange) !important;
+  text-decoration: none;
+}
+
+.link-orange:hover {
+  color: var(--primary-orange-dark) !important;
+  text-decoration: underline;
+}
+
+/* Card login */
+.login-card {
+  max-width: 400px;
+  width: 100%;
+}
