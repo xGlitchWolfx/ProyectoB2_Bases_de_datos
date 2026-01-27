@@ -5,7 +5,7 @@ import Admin from "./pages/admin";
 import Cliente from "./pages/cliente";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RegisterCliente from "./pages/RegisterCliente";
-import Backups from "./pages/Backups";
+import Backups from "./pages/backups";
 
 function App() {
   return (
