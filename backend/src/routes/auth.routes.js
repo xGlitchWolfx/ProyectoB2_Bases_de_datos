@@ -18,10 +18,9 @@ router.post("/login", async (req, res) => {
         u.email,
         u.password,
         r.nombre AS rol,
-        c.id_cliente
+        u.id_cliente
       FROM usuarios u
       JOIN roles r ON u.id_rol = r.id_rol
-      LEFT JOIN clientes c ON c.email = u.email
       WHERE u.email = $1
       `,
       [email]
@@ -42,7 +41,7 @@ router.post("/login", async (req, res) => {
       {
         id_usuario: user.id_usuario,
         rol: user.rol,
-        id_cliente: user.id_cliente || null
+        id_cliente: user.id_cliente // 👈 ya viene bien
       },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
@@ -55,7 +54,7 @@ router.post("/login", async (req, res) => {
         nombre: user.nombre,
         email: user.email,
         rol: user.rol,
-        id_cliente: user.id_cliente || null
+        id_cliente: user.id_cliente
       }
     });
 
@@ -88,27 +87,42 @@ router.post("/register-cliente", async (req, res) => {
       return res.status(409).json({ error: "El correo ya está registrado" });
     }
 
-    const hash = await bcrypt.hash(password, 10);
-
     const rolRes = await client.query(
       "SELECT id_rol FROM roles WHERE nombre = 'Cliente'"
     );
     const idRol = rolRes.rows[0].id_rol;
 
-    await client.query(
-      `
-      INSERT INTO usuarios (nombre, email, password, id_rol)
-      VALUES ($1,$2,$3,$4)
-      `,
-      [nombre, email, hash, idRol]
-    );
-
-    await client.query(
+    const clienteRes = await client.query(
       `
       INSERT INTO clientes (nombre, email, telefono)
       VALUES ($1,$2,$3)
+      RETURNING id_cliente
       `,
       [nombre, email, telefono || "N/A"]
+    );
+
+    const idCliente = clienteRes.rows[0].id_cliente;
+
+    const hash = await bcrypt.hash(password, 10);
+
+    const usuarioRes = await client.query(
+      `
+      INSERT INTO usuarios (nombre, email, password, id_rol, id_cliente)
+      VALUES ($1,$2,$3,$4,$5)
+      RETURNING id_usuario
+      `,
+      [nombre, email, hash, idRol, idCliente]
+    );
+
+    const idUsuario = usuarioRes.rows[0].id_usuario;
+
+    await client.query(
+      `
+      UPDATE clientes
+      SET id_usuario = $1
+      WHERE id_cliente = $2
+      `,
+      [idUsuario, idCliente]
     );
 
     await client.query("COMMIT");

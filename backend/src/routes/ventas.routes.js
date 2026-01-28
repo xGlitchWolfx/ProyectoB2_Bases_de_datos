@@ -83,18 +83,11 @@ router.post("/", auth, role("Empleado"), async (req, res) => {
 =========================== */
 router.get("/mis-compras", auth, role("Cliente"), async (req, res) => {
   try {
-    const id_usuario = req.user.id_usuario;
+    const id_cliente = req.user.id_cliente;
 
-    const clienteRes = await pool.query(
-      "SELECT id_cliente FROM usuarios WHERE id_usuario = $1",
-      [id_usuario]
-    );
-
-    if (clienteRes.rows.length === 0) {
+    if (!id_cliente) {
       return res.status(403).json({ error: "Usuario no es cliente" });
     }
-
-    const id_cliente = clienteRes.rows[0].id_cliente;
 
     const result = await pool.query(`
       SELECT 
@@ -123,6 +116,7 @@ router.get("/mis-compras", auth, role("Cliente"), async (req, res) => {
     res.status(500).json({ error: "Error al obtener compras" });
   }
 });
+
 
 /* ===========================
    MIS VENTAS (EMPLEADO)
