@@ -209,4 +209,80 @@ router.get("/:id", auth, async (req, res) => {
   res.json(result.rows);
 });
 
+/* ===========================
+   MIS VENTAS (EMPLEADO)
+=========================== */
+router.get("/mis-ventas", auth, role("Empleado"), async (req, res) => {
+  const id_usuario = req.user.id_usuario;
+  const { fecha } = req.query; // opcional
+
+  let query = `
+    SELECT v.id_venta, v.fecha, v.total,
+           COALESCE(c.nombre, 'Consumidor Final') AS cliente
+    FROM ventas v
+    LEFT JOIN clientes c ON v.id_cliente = c.id_cliente
+    WHERE v.id_usuario = $1
+  `;
+  const params = [id_usuario];
+
+  if (fecha) {
+    query += " AND DATE(v.fecha) = $2";
+    params.push(fecha);
+  }
+
+  query += " ORDER BY v.fecha DESC";
+
+  const result = await pool.query(query, params);
+  res.json(result.rows);
+});
+
+/* ===========================
+   ELIMINAR VENTA (EMPLEADO)
+=========================== */
+router.delete("/:id", auth, role("Empleado"), async (req, res) => {
+  const { id } = req.params;
+  const id_usuario = req.user.id_usuario;
+
+  try {
+    await pool.query("BEGIN");
+
+    // Verificar que la venta sea del empleado
+    const ventaRes = await pool.query(
+      "SELECT id_venta FROM ventas WHERE id_venta = $1 AND id_usuario = $2",
+      [id, id_usuario]
+    );
+
+    if (ventaRes.rows.length === 0) {
+      throw new Error("No puedes eliminar esta venta");
+    }
+
+    // Devolver stock
+    const detalles = await pool.query(
+      "SELECT id_producto, cantidad FROM detalle_venta WHERE id_venta = $1",
+      [id]
+    );
+
+    for (const d of detalles.rows) {
+      await pool.query(
+        "UPDATE productos SET stock = stock + $1 WHERE id_producto = $2",
+        [d.cantidad, d.id_producto]
+      );
+    }
+
+    // Borrar detalle y venta
+    await pool.query("DELETE FROM detalle_venta WHERE id_venta = $1", [id]);
+    await pool.query("DELETE FROM ventas WHERE id_venta = $1", [id]);
+
+    await pool.query("COMMIT");
+
+    res.json({ message: "Venta anulada y stock restaurado" });
+
+  } catch (error) {
+    await pool.query("ROLLBACK");
+    res.status(403).json({ error: error.message });
+  }
+});
+
+
+
 module.exports = router;
