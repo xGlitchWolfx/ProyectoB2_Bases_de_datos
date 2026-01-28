@@ -14,7 +14,7 @@ export default function Backups() {
     try {
       const res = await api.get("/backup");
       setBackups(res.data);
-    } catch (error) {
+    } catch {
       setMsg("❌ Error al cargar backups");
     }
   };
@@ -24,20 +24,13 @@ export default function Backups() {
     setLoading(true);
     setMsg("");
     try {
-      await api.post("/backup"); // ✅ RUTA CORRECTA
+      await api.post("/backup");
       await cargarBackups();
       setMsg("✅ Backup creado correctamente");
     } catch {
       setMsg("❌ Error al crear backup");
     }
     setLoading(false);
-  };
-
-  /* ================= ELIMINAR BACKUP ================= */
-  const eliminarBackup = async (file) => {
-    if (!window.confirm("¿Eliminar backup?")) return;
-    await api.delete(`/backup/${file}`);
-    cargarBackups();
   };
 
   /* ================= DESCARGAR BACKUP ================= */
@@ -58,31 +51,68 @@ export default function Backups() {
     }
   };
 
+  /* ================= ELIMINAR BACKUP ================= */
+  const eliminarBackup = async (file) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este backup?")) return;
+
+    setLoading(true);
+    try {
+      await api.delete(`/backup/${file}`);
+      await cargarBackups();
+      setMsg("🗑️ Backup eliminado correctamente");
+    } catch {
+      setMsg("❌ Error al eliminar backup");
+    }
+    setLoading(false);
+  };
+
   /* ================= RESTAURAR BACKUP ================= */
   const restaurarBackup = async (file) => {
-  if (!window.confirm("⚠️ Esto borrará TODA la base de datos. ¿Continuar?")) return;
+    const confirmar = window.confirm(
+      "⚠️ ATENCIÓN ⚠️\n\n" +
+      "Si restauras este backup:\n" +
+      "- Se BORRARÁ toda la base de datos actual\n" +
+      "- Los datos actuales se perderán\n\n" +
+      "👉 ¿Deseas continuar?\n" +
+      "💡 Recomendación: crea un backup antes de restaurar."
+    );
 
-  setLoading(true);
-  setMsg("");
+    if (!confirmar) return;
 
-  try {
-    await api.post(`/backup/restore-json/${file}`);
-    setMsg("✅ Backup restaurado correctamente");
-    await cargarBackups();
-  } catch (error) {
-    setMsg("❌ Error al restaurar backup");
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    setMsg("");
 
+    try {
+      await api.post(`/backup/restore-json/${file}`);
+      setMsg("♻️ Backup restaurado correctamente");
+      await cargarBackups();
+    } catch {
+      setMsg("❌ Error al restaurar backup");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /* ================= SUBIR BACKUP ================= */
   const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // ✅ ahora usamos JSON
+    // Confirmación extra antes de subir
+    const confirmar = window.confirm(
+      "⚠️ ADVERTENCIA ⚠️\n\n" +
+      "Si cargas este backup:\n" +
+      "- El contenido podría restaurarse luego\n" +
+      "- Podrías sobrescribir datos actuales\n\n" +
+      "👉 ¿Deseas continuar?\n" +
+      "💡 Recuerda crear otro backup por si las moscas 🐱‍👤"
+    );
+
+    if (!confirmar) {
+      e.target.value = "";
+      return;
+    }
+
     if (!file.name.endsWith(".json")) {
       setMsg("❌ Solo se permiten archivos .json");
       e.target.value = "";
@@ -100,7 +130,7 @@ export default function Backups() {
         headers: { "Content-Type": "multipart/form-data" }
       });
       await cargarBackups();
-      setMsg("✅ Backup subido correctamente");
+      setMsg("📂 Backup subido correctamente");
     } catch {
       setMsg("❌ Error al subir backup");
     }
@@ -139,7 +169,7 @@ export default function Backups() {
           <div className="card-body">
             <div className="d-flex justify-content-between align-items-center mb-4">
               <p className="text-muted mb-0">
-                Gestiona y restaura tus copias de seguridad.
+                Crea, descarga, restaura o elimina respaldos del sistema.
               </p>
               <button
                 className="btn btn-primary"
@@ -173,13 +203,27 @@ export default function Backups() {
                           <div className="d-flex gap-2 justify-content-end">
                             <button
                               className="btn btn-sm btn-outline-primary"
+                              title="Descargar"
                               onClick={() => descargarBackup(b)}
+                              disabled={loading}
                             >
                               ⬇️
                             </button>
+
+                            <button
+                              className="btn btn-sm btn-outline-warning"
+                              title="Restaurar"
+                              onClick={() => restaurarBackup(b)}
+                              disabled={loading}
+                            >
+                              ♻️
+                            </button>
+
                             <button
                               className="btn btn-sm btn-outline-danger"
+                              title="Eliminar"
                               onClick={() => eliminarBackup(b)}
+                              disabled={loading}
                             >
                               🗑️
                             </button>
