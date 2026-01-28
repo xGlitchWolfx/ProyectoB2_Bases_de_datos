@@ -25,5 +25,7 @@ app.use("/clientes", require("./routes/clientes.routes"));
 app.use("/usuarios", usuariosRoutes);
 app.use("/backup", backupRoutes);
 app.use("/api/backup", backupRoutes);
+app.use("/auditoria", require("./routes/auditoria.routes"));
+
 
 module.exports = app;

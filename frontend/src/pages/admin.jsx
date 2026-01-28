@@ -217,20 +217,42 @@ export default function Admin() {
           </div>
         </div>
       </main>
-      <button
-      classname="btn btn-warning shadow-lg"
-      onClick={() => window.location.href = "/backups"}
-      style={{
-            position: "fixed",
-            bottom: "25px",
-            right: "25px",
-            zIndex: 999,
-            borderRadius: "50px",
-            padding: "12px 18px",
-            fontWeight: "bold"
-      }}>
-        Backups
-      </button>
+<div
+  style={{
+    position: "fixed",
+    bottom: "25px",
+    right: "25px",
+    zIndex: 999,
+    display: "flex",
+    gap: "10px"
+  }}
+>
+  {/* BOTÓN AUDITORÍA */}
+  <button
+    className="btn btn-dark shadow-lg"
+    onClick={() => window.location.href = "/auditoria"}
+    style={{
+      borderRadius: "50px",
+      padding: "12px 18px",
+      fontWeight: "bold"
+    }}
+  >
+    🧾 Auditoría
+  </button>
+
+  {/* BOTÓN BACKUPS */}
+  <button
+    className="btn btn-warning shadow-lg"
+    onClick={() => window.location.href = "/backups"}
+    style={{
+      borderRadius: "50px",
+      padding: "12px 18px",
+      fontWeight: "bold"
+    }}
+  >
+    💾 Backups
+  </button>
+</div>
       <Footer />
     </div>
   );
