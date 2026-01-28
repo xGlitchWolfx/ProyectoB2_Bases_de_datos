@@ -105,7 +105,7 @@ router.post(
 
 /* ===================== RESTAURAR BACKUP JSON ===================== */
 router.post("/restore-json/:file", auth, role("Administrador"), async (req, res) => {
-  const filePath = `${BACKUP_DIR}/${req.params.file}`;
+  const filePath = path.join(BACKUP_DIR, req.params.file);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: "Backup no encontrado" });
@@ -117,15 +117,28 @@ router.post("/restore-json/:file", auth, role("Administrador"), async (req, res)
 
     await pool.query("BEGIN");
 
-    // ⚠️ BORRAR TODO (orden importa por FK)
-    await pool.query("DELETE FROM detalle_venta");
-    await pool.query("DELETE FROM ventas");
-    await pool.query("DELETE FROM productos");
-    await pool.query("DELETE FROM clientes");
-    await pool.query("DELETE FROM usuarios");
+    await pool.query(`
+      TRUNCATE
+        detalle_venta,
+        ventas,
+        productos,
+        clientes,
+        usuarios,
+        roles
+      RESTART IDENTITY CASCADE
+    `);
+
+    /* ================= RESTAURAR ROLES ================= */
+    for (const r of data.roles || []) {
+      await pool.query(
+        `INSERT INTO roles (id_rol, nombre)
+         VALUES ($1,$2)`,
+        [r.id_rol, r.nombre]
+      );
+    }
 
     /* ================= RESTAURAR USUARIOS ================= */
-    for (const u of data.usuarios) {
+    for (const u of data.usuarios || []) {
       await pool.query(
         `INSERT INTO usuarios (id_usuario, nombre, email, password, id_rol)
          VALUES ($1,$2,$3,$4,$5)`,
@@ -134,25 +147,25 @@ router.post("/restore-json/:file", auth, role("Administrador"), async (req, res)
     }
 
     /* ================= RESTAURAR CLIENTES ================= */
-    for (const c of data.clientes) {
+    for (const c of data.clientes || []) {
       await pool.query(
-        `INSERT INTO clientes (id_cliente, nombre)
-         VALUES ($1,$2)`,
-        [c.id_cliente, c.nombre]
+        `INSERT INTO clientes (id_cliente, nombre, telefono, email)
+         VALUES ($1,$2,$3,$4)`,
+        [c.id_cliente, c.nombre, c.telefono, c.email]
       );
     }
 
     /* ================= RESTAURAR PRODUCTOS ================= */
-    for (const p of data.productos) {
+    for (const p of data.productos || []) {
       await pool.query(
-        `INSERT INTO productos (id_producto, nombre, precio, stock)
-         VALUES ($1,$2,$3,$4)`,
-        [p.id_producto, p.nombre, p.precio, p.stock]
+        `INSERT INTO productos (id_producto, nombre, descripcion, precio, stock)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [p.id_producto, p.nombre, p.descripcion, p.precio, p.stock]
       );
     }
 
     /* ================= RESTAURAR VENTAS ================= */
-    for (const v of data.ventas) {
+    for (const v of data.ventas || []) {
       await pool.query(
         `INSERT INTO ventas (id_venta, id_cliente, id_usuario, total, fecha)
          VALUES ($1,$2,$3,$4,$5)`,
@@ -161,25 +174,24 @@ router.post("/restore-json/:file", auth, role("Administrador"), async (req, res)
     }
 
     /* ================= RESTAURAR DETALLE ================= */
-    for (const d of data.detalle_venta) {
+    for (const d of data.detalle_venta || []) {
       await pool.query(
-        `INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario)
-         VALUES ($1,$2,$3,$4)`,
-        [d.id_venta, d.id_producto, d.cantidad, d.precio_unitario]
+        `INSERT INTO detalle_venta (id_detalle, id_venta, id_producto, cantidad, precio_unitario)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [d.id_detalle, d.id_venta, d.id_producto, d.cantidad, d.precio_unitario]
       );
     }
 
     await pool.query("COMMIT");
 
-    res.json({ message: "Backup restaurado correctamente" });
+    res.json({ message: "✅ Backup restaurado correctamente" });
 
   } catch (error) {
     await pool.query("ROLLBACK");
-    console.error(error);
-    res.status(500).json({ error: "Error restaurando backup" });
+    console.error("RESTORE ERROR:", error);
+    res.status(500).json({ error: error.message });
   }
 });
-
 
 
 module.exports = router;
