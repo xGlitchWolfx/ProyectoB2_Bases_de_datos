@@ -9,16 +9,22 @@ export default function Backups() {
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
+  /* ================= CARGAR BACKUPS ================= */
   const cargarBackups = async () => {
-    const res = await api.get("/backup");
-    setBackups(res.data);
+    try {
+      const res = await api.get("/backup");
+      setBackups(res.data);
+    } catch (error) {
+      setMsg("❌ Error al cargar backups");
+    }
   };
 
+  /* ================= CREAR BACKUP ================= */
   const crearBackup = async () => {
     setLoading(true);
     setMsg("");
     try {
-      await api.post("/backup/backup");
+      await api.post("/backup"); // ✅ RUTA CORRECTA
       await cargarBackups();
       setMsg("✅ Backup creado correctamente");
     } catch {
@@ -27,37 +33,14 @@ export default function Backups() {
     setLoading(false);
   };
 
+  /* ================= ELIMINAR BACKUP ================= */
   const eliminarBackup = async (file) => {
     if (!window.confirm("¿Eliminar backup?")) return;
     await api.delete(`/backup/${file}`);
     cargarBackups();
   };
 
-const restaurarBackup = async (file) => {
-  const confirmar = window.confirm(
-    "⚠️ Esto sobrescribirá TODA la base de datos.\n¿Deseas continuar?"
-  );
-  if (!confirmar) return;
-
-  setLoading(true);
-  setMsg("");
-
-  try {
-    const res = await api.post(`/backup/restore/${file}`);
-    setMsg("✅ Backup restaurado correctamente");
-    await cargarBackups();
-  } catch (error) {
-    console.error(error);
-    setMsg(
-      error.response?.data?.error ||
-      "❌ Error al restaurar el backup"
-    );
-  } finally {
-    setLoading(false);
-  }
-};
-
-
+  /* ================= DESCARGAR BACKUP ================= */
   const descargarBackup = async (file) => {
     try {
       const res = await api.get(`/backup/download/${file}`, {
@@ -80,15 +63,9 @@ const restaurarBackup = async (file) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // ✅ Validaciones importantes
-    if (!file.name.endsWith(".backup")) {
-      setMsg("❌ Solo se permiten archivos .backup");
-      e.target.value = "";
-      return;
-    }
-
-    if (file.size > 50 * 1024 * 1024) { // 50MB
-      setMsg("❌ El archivo es demasiado grande");
+    // ✅ ahora usamos JSON
+    if (!file.name.endsWith(".json")) {
+      setMsg("❌ Solo se permiten archivos .json");
       e.target.value = "";
       return;
     }
@@ -123,7 +100,11 @@ const restaurarBackup = async (file) => {
 
       <main className="flex-grow-1 container py-4">
         {msg && (
-          <div className={`alert ${msg.includes("❌") ? "alert-danger" : "alert-success"} text-center mb-4`}>
+          <div
+            className={`alert ${
+              msg.includes("❌") ? "alert-danger" : "alert-success"
+            } text-center mb-4`}
+          >
             {msg}
           </div>
         )}
@@ -166,14 +147,23 @@ const restaurarBackup = async (file) => {
                       </td>
                     </tr>
                   ) : (
-                    backups.map(b => (
+                    backups.map((b) => (
                       <tr key={b}>
                         <td className="fw-medium">{b}</td>
                         <td className="text-end">
                           <div className="d-flex gap-2 justify-content-end">
-                            <button className="btn btn-sm btn-outline-primary" onClick={() => descargarBackup(b)}>⬇️</button>
-                            <button className="btn btn-sm btn-outline-warning" onClick={() => restaurarBackup(b)}>♻️</button>
-                            <button className="btn btn-sm btn-outline-danger" onClick={() => eliminarBackup(b)}>🗑️</button>
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => descargarBackup(b)}
+                            >
+                              ⬇️
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => eliminarBackup(b)}
+                            >
+                              🗑️
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -187,7 +177,7 @@ const restaurarBackup = async (file) => {
               <div>
                 <h6 className="fw-bold mb-1">Subir Respaldo Externo</h6>
                 <small className="text-muted">
-                  Solo archivos <b>.backup</b>
+                  Solo archivos <b>.json</b>
                 </small>
               </div>
 
@@ -196,19 +186,20 @@ const restaurarBackup = async (file) => {
                   type="file"
                   id="uploadBackup"
                   hidden
-                  accept=".backup"
+                  accept=".json"
                   onChange={handleUpload}
                 />
                 <button
                   className="btn btn-success"
-                  onClick={() => document.getElementById("uploadBackup").click()}
+                  onClick={() =>
+                    document.getElementById("uploadBackup").click()
+                  }
                   disabled={loading}
                 >
                   📂 Cargar Archivo
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       </main>

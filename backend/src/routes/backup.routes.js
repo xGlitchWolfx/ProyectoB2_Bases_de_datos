@@ -1,48 +1,60 @@
 const express = require("express");
-const { exec } = require("child_process");
+const fs = require("fs");
+const path = require("path");
+const multer = require("multer");
+const pool = require("../config/db");
 const auth = require("../middlewares/auth.middleware");
 const role = require("../middlewares/role.middleware");
-const fs = require("fs");
-require("dotenv").config();
 
 const router = express.Router();
-const BACKUP_DIR = "backups";
+const BACKUP_DIR = path.join(__dirname, "../backups");
+
+/* Crear carpeta si no existe */
+if (!fs.existsSync(BACKUP_DIR)) {
+  fs.mkdirSync(BACKUP_DIR);
+}
 
 /* ===================== LISTAR BACKUPS ===================== */
 router.get("/", auth, role("Administrador"), (req, res) => {
-  if (!fs.existsSync(BACKUP_DIR)) return res.json([]);
-
   const files = fs.readdirSync(BACKUP_DIR);
   res.json(files);
 });
 
-/* ===================== CREAR BACKUP ===================== */
-router.post("/backup", auth, role("Administrador"), (req, res) => {
-  if (!fs.existsSync(BACKUP_DIR)) {
-    fs.mkdirSync(BACKUP_DIR);
-  }
+/* ===================== CREAR BACKUP (JSON) ===================== */
+router.post("/", auth, role("Administrador"), async (req, res) => {
+  try {
+    const tablas = [
+      "roles",
+      "usuarios",
+      "clientes",
+      "productos",
+      "ventas",
+      "detalle_venta"
+    ];
 
-  const fecha = new Date().toISOString().replace(/[:.]/g, "-");
-  const file = `${BACKUP_DIR}/backup_${fecha}.backup`;
+    const backup = {};
 
-  const cmd = `"${process.env.PG_DUMP_PATH}" -U ${process.env.DB_USER} -h ${process.env.DB_HOST} -p ${process.env.DB_PORT} -F c -b -f "${file}" ${process.env.DB_NAME}`;
-
-  exec(
-    cmd,
-    { env: { ...process.env, PGPASSWORD: process.env.DB_PASSWORD } },
-    (error, stdout, stderr) => {
-      if (error) {
-        console.error(stderr);
-        return res.status(500).json({ error: "Error creando backup" });
-      }
-      res.json({ message: "Backup creado", file });
+    for (const tabla of tablas) {
+      const result = await pool.query(`SELECT * FROM ${tabla}`);
+      backup[tabla] = result.rows;
     }
-  );
+
+    const fecha = new Date().toISOString().replace(/[:.]/g, "-");
+    const filename = `backup_${fecha}.json`;
+    const filepath = path.join(BACKUP_DIR, filename);
+
+    fs.writeFileSync(filepath, JSON.stringify(backup, null, 2));
+
+    res.json({ message: "Backup creado", file: filename });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al crear backup" });
+  }
 });
 
 /* ===================== DESCARGAR BACKUP ===================== */
 router.get("/download/:file", auth, role("Administrador"), (req, res) => {
-  const filePath = `${BACKUP_DIR}/${req.params.file}`;
+  const filePath = path.join(BACKUP_DIR, req.params.file);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: "Backup no encontrado" });
@@ -51,47 +63,9 @@ router.get("/download/:file", auth, role("Administrador"), (req, res) => {
   res.download(filePath);
 });
 
-/* ===================== RESTAURAR BACKUP ===================== */
-router.post("/restore/:file", auth, role("Administrador"), (req, res) => {
-  const { file } = req.params;
-  const filePath = `${BACKUP_DIR}/${file}`;
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "Backup no encontrado" });
-  }
-
-  const restoreCmd = `
-    "${process.env.PG_RESTORE_PATH}"
-    -U ${process.env.DB_USER}
-    -h ${process.env.DB_HOST}
-    -p ${process.env.DB_PORT}
-    -d ${process.env.DB_NAME}
-    -c --if-exists
-    "${filePath}"
-  `;
-
-  exec(
-    restoreCmd,
-    { env: { ...process.env, PGPASSWORD: process.env.DB_PASSWORD } },
-    (restoreErr, stdout, restoreStderr) => {
-      if (restoreErr) {
-        console.error("Restore error:", restoreStderr);
-        return res.status(500).json({
-          error: "Error restaurando backup",
-          detalle: restoreStderr
-        });
-      }
-
-      res.json({ message: "Backup restaurado correctamente (Base de datos limpiada y restaurada)" });
-    }
-  );
-});
-
-
-
 /* ===================== ELIMINAR BACKUP ===================== */
 router.delete("/:file", auth, role("Administrador"), (req, res) => {
-  const filePath = `${BACKUP_DIR}/${req.params.file}`;
+  const filePath = path.join(BACKUP_DIR, req.params.file);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: "Backup no encontrado" });
@@ -100,23 +74,23 @@ router.delete("/:file", auth, role("Administrador"), (req, res) => {
   fs.unlinkSync(filePath);
   res.json({ message: "Backup eliminado" });
 });
-const multer = require("multer");
 
+/* ===================== SUBIR BACKUP ===================== */
 const storage = multer.diskStorage({
-  destination: "backups/",
+  destination: BACKUP_DIR,
   filename: (req, file, cb) => {
     cb(null, file.originalname);
   }
 });
 
 const upload = multer({
+  storage,
   fileFilter: (req, file, cb) => {
-    if (!file.originalname.endsWith(".backup")) {
-      return cb(new Error("Solo se permiten archivos .backup"));
+    if (!file.originalname.endsWith(".json")) {
+      return cb(new Error("Solo se permiten backups .json"));
     }
     cb(null, true);
-  },
-  storage
+  }
 });
 
 router.post(
