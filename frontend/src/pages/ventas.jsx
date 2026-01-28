@@ -125,7 +125,7 @@ export default function Ventas() {
   return (
     <div className="d-flex flex-column min-vh-100">
       <Header title="Registro de Ventas" />
-      
+
       <main className="flex-grow-1 container py-4">
         {mensaje && (
           <div className={`alert ${mensaje.toLowerCase().includes("error") || mensaje.toLowerCase().includes("insuficiente") || mensaje.toLowerCase().includes("obligatorio") ? "alert-danger" : "alert-success"} text-center`}>
@@ -143,8 +143,6 @@ export default function Ventas() {
                 ⚡ Venta Rápida (Consumidor Final)
               </button>
             </div>
-
-            <hr />
 
             <div className="mb-3">
               <label className="form-label">Cliente Registrado:</label>
@@ -166,10 +164,8 @@ export default function Ventas() {
               </div>
             </div>
 
-            <div className="text-center">
-              <button className="btn btn-link" onClick={() => setEtapa(2)}>
-                Crear Nuevo Cliente
-              </button>
+            <div className="text-center mt-3">
+              <button className="btn btn-link" onClick={() => setEtapa(2)}>Crear Nuevo Cliente</button>
             </div>
           </div>
         )}
