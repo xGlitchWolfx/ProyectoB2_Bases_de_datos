@@ -16,6 +16,7 @@ export default function Ventas() {
   const [misVentas, setMisVentas] = useState([]);
   const [fechaFiltro, setFechaFiltro] = useState("");
   const [cargandoVentas, setCargandoVentas] = useState(false);
+  const [mostrarEditor, setMostrarEditor] = useState(false);
 
   const [nuevoCliente, setNuevoCliente] = useState({
     nombre: "",
@@ -316,10 +317,17 @@ const anularVenta = async (id_venta) => {
             }}>Nueva Venta</button>
           </div>
         )}
+
+        <div className="text-center mt-5">
+          <button className="btn btn-secondary" onClick={() => setMostrarEditor(!mostrarEditor)}>
+            Editor de Ventas
+          </button>
+        </div>
       </main>
       {/* ===========================
     EDITAR / ANULAR VENTAS
 =========================== */}
+      {mostrarEditor && (
 <div className="card shadow p-4 mt-5">
   <h3 className="mb-4">🧾 Editar / Anular Ventas</h3>
 
@@ -387,6 +395,7 @@ const anularVenta = async (id_venta) => {
     </table>
   </div>
 </div>
+      )}
 
       <Footer />
     </div>
