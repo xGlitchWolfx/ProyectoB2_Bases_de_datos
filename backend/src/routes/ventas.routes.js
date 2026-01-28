@@ -86,7 +86,7 @@ router.get("/mis-compras", auth, role("Cliente"), async (req, res) => {
     const id_usuario = req.user.id_usuario;
 
     const clienteRes = await pool.query(
-      "SELECT id_cliente FROM clientes WHERE id_usuario = $1",
+      "SELECT id_cliente FROM usuarios WHERE id_usuario = $1",
       [id_usuario]
     );
 

@@ -21,7 +21,8 @@ export default function Ventas() {
   const [nuevoCliente, setNuevoCliente] = useState({
     nombre: "",
     email: "",
-    telefono: ""
+    telefono: "",
+    password: ""
   });
 
   // cargar productos
@@ -47,10 +48,16 @@ export default function Ventas() {
         setMensaje("El nombre es obligatorio para crear cliente");
         return;
       }
-      await api.post("/clientes", nuevoCliente);
+
+      // Si hay contraseña, usamos el registro de usuarios (crea usuario + cliente)
+      // Si no, usamos el registro simple de clientes
+      const endpoint = nuevoCliente.password ? "/auth/register-cliente" : "/clientes";
+      
+      await api.post(endpoint, nuevoCliente);
+      
       const res = await api.get("/clientes"); // Recargar lista
       setClientes(res.data);
-      setNuevoCliente({ nombre: "", email: "", telefono: "" });
+      setNuevoCliente({ nombre: "", email: "", telefono: "", password: "" });
       setMensaje("Cliente creado exitosamente");
       setEtapa(1); // Volver a la selección
     } catch (error) {
@@ -214,6 +221,9 @@ const anularVenta = async (id_venta) => {
             </div>
             <div className="mb-3">
               <input type="text" className="form-control" placeholder="Teléfono" value={nuevoCliente.telefono} onChange={e => setNuevoCliente({ ...nuevoCliente, telefono: e.target.value })} />
+            </div>
+            <div className="mb-3">
+              <input type="password" className="form-control" placeholder="Contraseña (Opcional para acceso web)" value={nuevoCliente.password} onChange={e => setNuevoCliente({ ...nuevoCliente, password: e.target.value })} />
             </div>
             
             <div className="d-flex gap-2 justify-content-center">
