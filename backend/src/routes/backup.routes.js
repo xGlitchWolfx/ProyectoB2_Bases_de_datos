@@ -112,36 +112,66 @@ router.post("/restore-json/:file", auth, role("Administrador"), async (req, res)
   }
 
   try {
-    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    const raw = fs.readFileSync(filePath, "utf-8");
+    const data = JSON.parse(raw);
 
     await pool.query("BEGIN");
 
-    // ⚠️ ORDEN IMPORTA (relaciones)
-    await pool.query("TRUNCATE detalle_venta, ventas, usuarios, clientes, productos, roles RESTART IDENTITY CASCADE");
+    // ⚠️ BORRAR TODO (orden importa por FK)
+    await pool.query("DELETE FROM detalle_venta");
+    await pool.query("DELETE FROM ventas");
+    await pool.query("DELETE FROM productos");
+    await pool.query("DELETE FROM clientes");
+    await pool.query("DELETE FROM usuarios");
 
-    const insertar = async (tabla, filas) => {
-      for (const fila of filas) {
-        const columnas = Object.keys(fila);
-        const valores = Object.values(fila);
-        const params = columnas.map((_, i) => `$${i + 1}`).join(",");
+    /* ================= RESTAURAR USUARIOS ================= */
+    for (const u of data.usuarios) {
+      await pool.query(
+        `INSERT INTO usuarios (id_usuario, nombre, email, password, id_rol)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [u.id_usuario, u.nombre, u.email, u.password, u.id_rol]
+      );
+    }
 
-        await pool.query(
-          `INSERT INTO ${tabla} (${columnas.join(",")}) VALUES (${params})`,
-          valores
-        );
-      }
-    };
+    /* ================= RESTAURAR CLIENTES ================= */
+    for (const c of data.clientes) {
+      await pool.query(
+        `INSERT INTO clientes (id_cliente, nombre)
+         VALUES ($1,$2)`,
+        [c.id_cliente, c.nombre]
+      );
+    }
 
-    if (data.roles) await insertar("roles", data.roles);
-    if (data.clientes) await insertar("clientes", data.clientes);
-    if (data.usuarios) await insertar("usuarios", data.usuarios);
-    if (data.productos) await insertar("productos", data.productos);
-    if (data.ventas) await insertar("ventas", data.ventas);
-    if (data.detalle_venta) await insertar("detalle_venta", data.detalle_venta);
+    /* ================= RESTAURAR PRODUCTOS ================= */
+    for (const p of data.productos) {
+      await pool.query(
+        `INSERT INTO productos (id_producto, nombre, precio, stock)
+         VALUES ($1,$2,$3,$4)`,
+        [p.id_producto, p.nombre, p.precio, p.stock]
+      );
+    }
+
+    /* ================= RESTAURAR VENTAS ================= */
+    for (const v of data.ventas) {
+      await pool.query(
+        `INSERT INTO ventas (id_venta, id_cliente, id_usuario, total, fecha)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [v.id_venta, v.id_cliente, v.id_usuario, v.total, v.fecha]
+      );
+    }
+
+    /* ================= RESTAURAR DETALLE ================= */
+    for (const d of data.detalle_venta) {
+      await pool.query(
+        `INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario)
+         VALUES ($1,$2,$3,$4)`,
+        [d.id_venta, d.id_producto, d.cantidad, d.precio_unitario]
+      );
+    }
 
     await pool.query("COMMIT");
 
-    res.json({ message: "✅ Backup restaurado correctamente" });
+    res.json({ message: "Backup restaurado correctamente" });
 
   } catch (error) {
     await pool.query("ROLLBACK");
@@ -149,6 +179,7 @@ router.post("/restore-json/:file", auth, role("Administrador"), async (req, res)
     res.status(500).json({ error: "Error restaurando backup" });
   }
 });
+
 
 
 module.exports = router;
