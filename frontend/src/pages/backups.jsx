@@ -58,6 +58,25 @@ export default function Backups() {
     }
   };
 
+  /* ================= RESTAURAR BACKUP ================= */
+  const restaurarBackup = async (file) => {
+  if (!window.confirm("⚠️ Esto borrará TODA la base de datos. ¿Continuar?")) return;
+
+  setLoading(true);
+  setMsg("");
+
+  try {
+    await api.post(`/backup/restore-json/${file}`);
+    setMsg("✅ Backup restaurado correctamente");
+    await cargarBackups();
+  } catch (error) {
+    setMsg("❌ Error al restaurar backup");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
   /* ================= SUBIR BACKUP ================= */
   const handleUpload = async (e) => {
     const file = e.target.files[0];

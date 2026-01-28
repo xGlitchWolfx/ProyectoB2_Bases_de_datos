@@ -103,4 +103,52 @@ router.post(
   }
 );
 
+/* ===================== RESTAURAR BACKUP JSON ===================== */
+router.post("/restore-json/:file", auth, role("Administrador"), async (req, res) => {
+  const filePath = `${BACKUP_DIR}/${req.params.file}`;
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "Backup no encontrado" });
+  }
+
+  try {
+    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+
+    await pool.query("BEGIN");
+
+    // ⚠️ ORDEN IMPORTA (relaciones)
+    await pool.query("TRUNCATE detalle_venta, ventas, usuarios, clientes, productos, roles RESTART IDENTITY CASCADE");
+
+    const insertar = async (tabla, filas) => {
+      for (const fila of filas) {
+        const columnas = Object.keys(fila);
+        const valores = Object.values(fila);
+        const params = columnas.map((_, i) => `$${i + 1}`).join(",");
+
+        await pool.query(
+          `INSERT INTO ${tabla} (${columnas.join(",")}) VALUES (${params})`,
+          valores
+        );
+      }
+    };
+
+    if (data.roles) await insertar("roles", data.roles);
+    if (data.clientes) await insertar("clientes", data.clientes);
+    if (data.usuarios) await insertar("usuarios", data.usuarios);
+    if (data.productos) await insertar("productos", data.productos);
+    if (data.ventas) await insertar("ventas", data.ventas);
+    if (data.detalle_venta) await insertar("detalle_venta", data.detalle_venta);
+
+    await pool.query("COMMIT");
+
+    res.json({ message: "✅ Backup restaurado correctamente" });
+
+  } catch (error) {
+    await pool.query("ROLLBACK");
+    console.error(error);
+    res.status(500).json({ error: "Error restaurando backup" });
+  }
+});
+
+
 module.exports = router;
