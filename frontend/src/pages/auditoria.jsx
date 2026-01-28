@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../services/api";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -45,8 +46,11 @@ export default function Auditoria() {
         {mensaje && <div className="alert alert-danger">{mensaje}</div>}
 
         <div className="card shadow">
-          <div className="card-header bg-white">
+          <div className="card-header bg-white d-flex justify-content-between align-items-center">
             <h4 className="mb-0">📜 Registro de Eventos</h4>
+            <Link to="/admin" className="btn btn-secondary btn-sm">
+              Volver al Panel
+            </Link>
           </div>
           <div className="card-body">
             {/* FILTROS */}
