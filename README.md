@@ -104,6 +104,7 @@ El modelo fue normalizado hasta **3FN**, evitando redundancia y asegurando consi
 ## Enlaces del Proyecto
 
 Credenciales para poder usar esta aplicacion.
+
  Admin:
 - correo: admin@test.com
 - contraseña: 123
