@@ -13,6 +13,9 @@ export default function Ventas() {
   const [mensaje, setMensaje] = useState("");
   const [factura, setFactura] = useState(null);
   const [etapa, setEtapa] = useState(1); // 1: Selección, 2: Creación, 3: Venta
+  const [misVentas, setMisVentas] = useState([]);
+  const [fechaFiltro, setFechaFiltro] = useState("");
+  const [cargandoVentas, setCargandoVentas] = useState(false);
 
   const [nuevoCliente, setNuevoCliente] = useState({
     nombre: "",
@@ -121,6 +124,34 @@ export default function Ventas() {
       setMensaje(error.response?.data?.error || "Error al registrar venta");
     }
   };
+
+  // Cargar ventas del empleado
+const cargarMisVentas = async () => {
+  try {
+    setCargandoVentas(true);
+    const res = await api.get("/ventas/mis-ventas", {
+      params: fechaFiltro ? { fecha: fechaFiltro } : {}
+    });
+    setMisVentas(res.data);
+  } catch {
+    setMensaje("Error al cargar ventas");
+  } finally {
+    setCargandoVentas(false);
+  }
+};
+
+// Anular venta
+const anularVenta = async (id_venta) => {
+  if (!window.confirm("¿Seguro que deseas anular esta venta? Se devolverá el stock.")) return;
+
+  try {
+    await api.delete(`/ventas/${id_venta}`);
+    setMensaje("Venta anulada correctamente");
+    cargarMisVentas();
+  } catch (error) {
+    setMensaje(error.response?.data?.error || "Error al anular venta");
+  }
+};
 
   return (
     <div className="d-flex flex-column min-vh-100">
@@ -286,7 +317,77 @@ export default function Ventas() {
           </div>
         )}
       </main>
-      
+      {/* ===========================
+    EDITAR / ANULAR VENTAS
+=========================== */}
+<div className="card shadow p-4 mt-5">
+  <h3 className="mb-4">🧾 Editar / Anular Ventas</h3>
+
+  {/* Filtro */}
+  <div className="row mb-3">
+    <div className="col-md-4">
+      <label className="form-label">Filtrar por fecha</label>
+      <input
+        type="date"
+        className="form-control"
+        value={fechaFiltro}
+        onChange={e => setFechaFiltro(e.target.value)}
+      />
+    </div>
+    <div className="col-md-3 d-flex align-items-end">
+      <button
+        className="btn btn-secondary w-100"
+        onClick={cargarMisVentas}
+      >
+        Buscar
+      </button>
+    </div>
+  </div>
+
+  {/* Tabla */}
+  <div className="table-responsive">
+    <table className="table table-bordered table-hover">
+      <thead className="table-light">
+        <tr>
+          <th>#</th>
+          <th>Fecha</th>
+          <th>Cliente</th>
+          <th>Total</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {cargandoVentas ? (
+          <tr>
+            <td colSpan="5" className="text-center">Cargando...</td>
+          </tr>
+        ) : misVentas.length === 0 ? (
+          <tr>
+            <td colSpan="5" className="text-center">No hay ventas</td>
+          </tr>
+        ) : (
+          misVentas.map(v => (
+            <tr key={v.id_venta}>
+              <td>{v.id_venta}</td>
+              <td>{new Date(v.fecha).toLocaleDateString()}</td>
+              <td>{v.cliente}</td>
+              <td>${v.total}</td>
+              <td>
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={() => anularVenta(v.id_venta)}
+                >
+                  Anular
+                </button>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
+
       <Footer />
     </div>
   );
