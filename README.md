@@ -101,7 +101,22 @@ El modelo fue normalizado hasta **3FN**, evitando redundancia y asegurando consi
 - Presentar información de forma clara y responsiva.
 
 ---
+## Enlaces del Proyecto
+- Credenciales para poder usar esta aplicacion.
+- Admin:
+- correo: admin@test.com
+- contraseña: 123
 
+- Empleado:
+- correo: empleado@test.com
+- contraseña: 123
+
+- cliente:
+- correo: cliente@test.com
+- contraseña 123
+
+- con estas credenciales se puede acceder a la aplicacion y probarla en su totalidad
+---
 ## Enlaces del Proyecto
 
 🔗 **Repositorio GitHub**  
