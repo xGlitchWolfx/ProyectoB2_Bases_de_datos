@@ -214,7 +214,7 @@ router.get("/:id", auth, async (req, res) => {
 =========================== */
 router.get("/mis-ventas", auth, role("Empleado"), async (req, res) => {
   const id_usuario = req.user.id_usuario;
-  const { fecha } = req.query; // opcional
+  const { fecha } = req.query;
 
   let query = `
     SELECT v.id_venta, v.fecha, v.total,
@@ -235,6 +235,7 @@ router.get("/mis-ventas", auth, role("Empleado"), async (req, res) => {
   const result = await pool.query(query, params);
   res.json(result.rows);
 });
+
 
 /* ===========================
    ELIMINAR VENTA (EMPLEADO)
